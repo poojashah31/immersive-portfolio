@@ -21,6 +21,10 @@ import { CAMERA_CONFIG, DOLLY_CONFIG } from '../constants/sceneConfig'
 function useCameraAnimation() {
   const { camera } = useThree()
 
+  // FLAG TO TEMPORARILY DISABLE ANIMATION
+  // Set to true to allow manual camera framing via OrbitControls from start
+  const DISABLE_ANIMATION = false
+
   // The ref that GSAP animates — R3F reads it each frame via useFrame
   const positionRef = useRef({
     x: CAMERA_CONFIG.startPosition[0],
@@ -29,13 +33,22 @@ function useCameraAnimation() {
   })
 
   const lookAtVec = useRef(new Vector3(...CAMERA_CONFIG.lookAt))
-  const [isAnimating, setIsAnimating] = useState(true)
-  const isAnimatingRef = useRef(true)
+  const [isAnimating, setIsAnimating] = useState(!DISABLE_ANIMATION)
+  const isAnimatingRef = useRef(!DISABLE_ANIMATION)
   const tweenRef = useRef(null)
 
   useEffect(() => {
     const [sx, sy, sz] = CAMERA_CONFIG.startPosition
+    const [mx, my, mz] = CAMERA_CONFIG.midPosition
     const [ex, ey, ez] = CAMERA_CONFIG.endPosition
+
+    if (DISABLE_ANIMATION) {
+      // Set camera to start position immediately on mount
+      camera.position.set(sx, sy, sz)
+      camera.lookAt(lookAtVec.current)
+      camera.updateProjectionMatrix()
+      return
+    }
 
     // Set camera to start position immediately on mount
     camera.position.set(sx, sy, sz)
@@ -48,19 +61,32 @@ function useCameraAnimation() {
     isAnimatingRef.current = true
     setIsAnimating(true)
 
-    // GSAP animates the proxy object only — no camera updates here
-    tweenRef.current = gsap.to(positionRef.current, {
-      x: ex,
-      y: ey,
-      z: ez,
-      duration: DOLLY_CONFIG.duration,
+    // Create a multi-stage cinematic timeline
+    const tl = gsap.timeline({
       delay: DOLLY_CONFIG.delay,
-      ease: DOLLY_CONFIG.ease,
       onComplete: () => {
         isAnimatingRef.current = false
         setIsAnimating(false)
-      },
+      }
     })
+
+    const halfDuration = DOLLY_CONFIG.duration / 2
+
+    tl.to(positionRef.current, {
+      x: mx,
+      y: my,
+      z: mz,
+      duration: halfDuration,
+      ease: 'sine.in',
+    }).to(positionRef.current, {
+      x: ex,
+      y: ey,
+      z: ez,
+      duration: halfDuration,
+      ease: 'sine.out',
+    })
+
+    tweenRef.current = tl
 
     return () => {
       if (tweenRef.current) {

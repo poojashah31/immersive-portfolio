@@ -32,8 +32,10 @@
 export const CAMERA_CONFIG = {
   // Starting position — far enough back to see full pedestal + book clearly
   startPosition: [0, 2.0, 7.0],
-  // End position — slightly elevated front view framing book on pedestal top
-  endPosition: [0, 1.8, 3.5],
+  // Intermediate position — approaches and begins to elevate
+  midPosition: [0, 2.8, 4.0],
+  // End position — elevated hero close-up framing book on pedestal top
+  endPosition: [-0.037, 3.868, 1.732],
   // Aim at the top 1/3 of the pedestal — where the book sits
   lookAt: [0, 1.5, 0],
   // Vertical field of view in degrees
@@ -53,7 +55,7 @@ export const DOLLY_CONFIG = {
   // Seconds before the camera begins moving (lets the scene fully render first)
   delay: 0.5,
   // Total duration of the camera push-in
-  duration: 3.5,
+  duration: 5.0,
   // GSAP ease — slow start, slow stop
   ease: 'power2.inOut',
 }
