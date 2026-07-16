@@ -30,18 +30,21 @@
 // ─── Camera ──────────────────────────────────────────────────────────────────
 
 export const CAMERA_CONFIG = {
-  // Starting position — pulled well back, raised to center the composition
-  startPosition: [0, 2.2, 8.5],
-  // End position — dramatic close-up, camera at book level
-  endPosition: [0, 1.5, 2.6],
-  // The world-space focal point — aim at the book surface
-  // Pedestal top = 0.94, book center above it = 1.1
-  // We look slightly higher to center in frame vertically
-  lookAt: [0, 1.2, 0],
+  // Starting position — far enough back to see full pedestal + book clearly
+  startPosition: [0, 2.0, 7.0],
+  // End position — slightly elevated front view framing book on pedestal top
+  endPosition: [0, 1.8, 3.5],
+  // Aim at the top 1/3 of the pedestal — where the book sits
+  lookAt: [0, 1.5, 0],
   // Vertical field of view in degrees
-  fov: 46,
+  fov: 50,
   near: 0.1,
   far: 100,
+  // OrbitControls limits — allow wide zoom range for inspection
+  controls: {
+    minDistance: 1.0,
+    maxDistance: 20.0,
+  }
 }
 
 // ─── Dolly Animation ─────────────────────────────────────────────────────────
@@ -50,7 +53,7 @@ export const DOLLY_CONFIG = {
   // Seconds before the camera begins moving (lets the scene fully render first)
   delay: 0.5,
   // Total duration of the camera push-in
-  duration: 7.0,
+  duration: 3.5,
   // GSAP ease — slow start, slow stop
   ease: 'power2.inOut',
 }
@@ -58,33 +61,34 @@ export const DOLLY_CONFIG = {
 // ─── Lighting ────────────────────────────────────────────────────────────────
 
 export const LIGHTING_CONFIG = {
-  // Warm ambient — soft base fill so the darkest shadows aren't pure void
+  // Ambient — very low, neutral white. Stone retains its grey texture.
   ambient: {
-    color: '#c87030',
-    intensity: 0.5,
+    color: '#d0d0d0',
+    intensity: 0.15,
   },
-  // Key light — warm golden torch above and slightly in front of the book
+  // Key light — warm golden, positioned tightly above the book only.
+  // Low distance (6) so it falls off before it fully warms the stone column.
   keyLight: {
-    color: '#f59a30',
-    intensity: 60,
-    position: [0.5, 4.0, 2.5],
-    distance: 14,
+    color: '#f0c060',
+    intensity: 12,
+    position: [0.5, 2.5, 1.5],
+    distance: 6,
     decay: 2,
   },
-  // Fill light — dim warm fill from front-left to soften shadow side
+  // Fill light — cool-neutral to preserve stone grey on the shadow side
   fillLight: {
-    color: '#c06a15',
-    intensity: 25,
-    position: [-2.5, 2.0, 3.0],
-    distance: 10,
+    color: '#8090a0',
+    intensity: 4,
+    position: [-2.0, 1.5, 2.5],
+    distance: 9,
     decay: 2,
   },
-  // Rim light — subtle warm separation from behind
+  // Rim light — very faint neutral white edge separation from behind
   rimLight: {
-    color: '#7a3d10',
-    intensity: 15,
-    position: [0, 2.5, -3.0],
-    distance: 8,
+    color: '#c0c0c0',
+    intensity: 3,
+    position: [0, 2.0, -2.5],
+    distance: 7,
     decay: 2,
   },
 }
@@ -119,40 +123,21 @@ export const BOOK_CONFIG = {
 
 // ─── Pedestal ─────────────────────────────────────────────────────────────────
 //
-// Pedestal geometry reference (Y values = center of each section):
-//   Base:   height=0.12, center y=0.06  → top surface at y=0.12
-//   Column: height=0.70, center y=0.47  → top surface at y=0.82
-//   Top:    height=0.12, center y=0.88  → top surface at y=0.94
-//
-// Book rests on pedestal top surface at y≈0.94
+// Stylized stone pedestal GLB
+// The topSurfaceY property defines where the book rests.
 
 export const PEDESTAL_CONFIG = {
+  modelPath: '/models/pedestal/stylized_pedestal.glb',
   position: [0, 0, 0],
-  // Base slab — wide foundation
-  base: {
-    width: 2.0,
-    height: 0.12,
-    depth: 2.0,
-    y: 0.06,
-  },
-  // Middle column — narrower
-  column: {
-    width: 0.75,
-    height: 0.70,
-    depth: 0.75,
-    y: 0.47,
-  },
-  // Top platform — book sits here
-  top: {
-    width: 1.4,
-    height: 0.12,
-    depth: 1.4,
-    y: 0.88,
-  },
-  // Stone material — dark warm stone
-  material: {
-    color: '#1e1a16',
-    roughness: 0.95,
-    metalness: 0.02,
-  },
+  // Scale: keep the pedestal proportionate, not dominating the scene.
+  scale: [0.5, 0.5, 0.5],
+
+  // ── Runtime-measured values (written by Pedestal.jsx after bbox calculation) ──
+  // Fallback values are used only for the initial React render; the real values
+  // are overwritten in Pedestal's useEffect as soon as the GLB is mounted.
+  topSurfaceY: 1.4,   // world-space Y of the pedestal top surface
+  centerX: 0,         // world-space X center of the pedestal bounding box
+  centerZ: 0,         // world-space Z center of the pedestal bounding box
+  worldWidth: 1.2,    // world-space X extent of the full pedestal bbox
+  worldDepth: 1.2,    // world-space Z extent of the full pedestal bbox
 }

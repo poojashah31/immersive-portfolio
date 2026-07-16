@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import { Vector3 } from 'three'
 import gsap from 'gsap'
@@ -29,7 +29,8 @@ function useCameraAnimation() {
   })
 
   const lookAtVec = useRef(new Vector3(...CAMERA_CONFIG.lookAt))
-  const isAnimating = useRef(false)
+  const [isAnimating, setIsAnimating] = useState(true)
+  const isAnimatingRef = useRef(true)
   const tweenRef = useRef(null)
 
   useEffect(() => {
@@ -44,7 +45,8 @@ function useCameraAnimation() {
     // Initialize proxy to match start position
     positionRef.current = { x: sx, y: sy, z: sz }
 
-    isAnimating.current = true
+    isAnimatingRef.current = true
+    setIsAnimating(true)
 
     // GSAP animates the proxy object only — no camera updates here
     tweenRef.current = gsap.to(positionRef.current, {
@@ -55,7 +57,8 @@ function useCameraAnimation() {
       delay: DOLLY_CONFIG.delay,
       ease: DOLLY_CONFIG.ease,
       onComplete: () => {
-        isAnimating.current = false
+        isAnimatingRef.current = false
+        setIsAnimating(false)
       },
     })
 
@@ -68,6 +71,7 @@ function useCameraAnimation() {
 
   // Apply GSAP proxy values to camera every R3F frame tick
   useFrame(() => {
+    if (!isAnimatingRef.current) return
     const { x, y, z } = positionRef.current
     camera.position.set(x, y, z)
     camera.lookAt(lookAtVec.current)

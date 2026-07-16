@@ -1,66 +1,69 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
+import { useGLTF } from '@react-three/drei'
+import { Box3, Vector3 } from 'three'
 import { PEDESTAL_CONFIG } from '../constants/sceneConfig'
 
 /**
  * Pedestal Component
  *
- * A procedural stone pedestal built from Three.js box geometry.
- * Three sections: wide base slab, narrower column, and top platform.
- *
- * All Y values in PEDESTAL_CONFIG are the center Y of each section.
- * The book rests on top of the platform surface.
+ * Loads the stylized stone pedestal GLB.
+ * After mount, measures the true world-space bounding box and writes
+ * all spatial data into PEDESTAL_CONFIG so BookModel can align itself
+ * correctly without any hardcoded guesses.
  */
 function Pedestal() {
-  const { base, column, top, material, position } = PEDESTAL_CONFIG
+  const { modelPath, position, scale } = PEDESTAL_CONFIG
+  const { scene } = useGLTF(modelPath)
+  const primitiveRef = useRef()
+
+  useEffect(() => {
+    if (!primitiveRef.current) return
+
+    // Enable shadows
+    scene.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true
+        child.receiveShadow = true
+      }
+    })
+
+    // Force full world matrix update so Box3 reads correct world coords
+    primitiveRef.current.updateWorldMatrix(true, true)
+
+    // Measure the real world-space bounding box
+    const bbox = new Box3().setFromObject(primitiveRef.current)
+    const center = new Vector3()
+    bbox.getCenter(center)
+
+    // Write all spatial data back to the shared config object.
+    // BookModel reads these to align the book correctly at runtime.
+    PEDESTAL_CONFIG.topSurfaceY = bbox.max.y
+    PEDESTAL_CONFIG.centerX    = center.x
+    PEDESTAL_CONFIG.centerZ    = center.z
+    PEDESTAL_CONFIG.worldWidth = bbox.max.x - bbox.min.x
+    PEDESTAL_CONFIG.worldDepth = bbox.max.z - bbox.min.z
+
+    if (import.meta.env.DEV) {
+      console.log('[Pedestal] bbox X:', bbox.min.x.toFixed(3), '→', bbox.max.x.toFixed(3))
+      console.log('[Pedestal] bbox Y:', bbox.min.y.toFixed(3), '→', bbox.max.y.toFixed(3))
+      console.log('[Pedestal] bbox Z:', bbox.min.z.toFixed(3), '→', bbox.max.z.toFixed(3))
+      console.log('[Pedestal] centerX:', PEDESTAL_CONFIG.centerX.toFixed(3), 'centerZ:', PEDESTAL_CONFIG.centerZ.toFixed(3))
+      console.log('[Pedestal] worldWidth:', PEDESTAL_CONFIG.worldWidth.toFixed(3), 'worldDepth:', PEDESTAL_CONFIG.worldDepth.toFixed(3))
+      console.log('[Pedestal] topSurfaceY:', PEDESTAL_CONFIG.topSurfaceY.toFixed(3))
+    }
+  }, [scene])
 
   return (
-    <group name="pedestal" position={position}>
-      {/* Base slab — wide foundation on the floor */}
-      <mesh
-        name="pedestal-base"
-        position={[0, base.y, 0]}
-        receiveShadow
-        castShadow
-      >
-        <boxGeometry args={[base.width, base.height, base.depth]} />
-        <meshStandardMaterial
-          color={material.color}
-          roughness={material.roughness}
-          metalness={material.metalness}
-        />
-      </mesh>
-
-      {/* Column — connects base to top */}
-      <mesh
-        name="pedestal-column"
-        position={[0, column.y, 0]}
-        receiveShadow
-        castShadow
-      >
-        <boxGeometry args={[column.width, column.height, column.depth]} />
-        <meshStandardMaterial
-          color={material.color}
-          roughness={material.roughness}
-          metalness={material.metalness}
-        />
-      </mesh>
-
-      {/* Top platform — the book rests on this surface */}
-      <mesh
-        name="pedestal-top"
-        position={[0, top.y, 0]}
-        receiveShadow
-        castShadow
-      >
-        <boxGeometry args={[top.width, top.height, top.depth]} />
-        <meshStandardMaterial
-          color={material.color}
-          roughness={material.roughness}
-          metalness={material.metalness}
-        />
-      </mesh>
-    </group>
+    <primitive
+      ref={primitiveRef}
+      object={scene}
+      position={position}
+      scale={scale}
+    />
   )
 }
+
+// Preload the pedestal model to ensure it's ready quickly
+useGLTF.preload(PEDESTAL_CONFIG.modelPath)
 
 export default Pedestal
