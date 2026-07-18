@@ -98,11 +98,11 @@ export const LIGHTING_CONFIG = {
 // ─── Scene Background ─────────────────────────────────────────────────────────
 
 export const SCENE_CONFIG = {
-  background: '#050402', // Near pure black with a faint warm tone
+  background: '#0a0908', // Dark warm background
   fog: {
-    color: '#050402',
-    near: 10,
-    far: 28,
+    color: '#0a0908',
+    near: 25,       // Pushed WAY back so architecture is not fogged out
+    far: 60,        // Very far — allows distant walls to remain visible
   },
 }
 
@@ -142,4 +142,236 @@ export const PEDESTAL_CONFIG = {
   centerZ: 0,         // world-space Z center of the pedestal bounding box
   worldWidth: 1.2,    // world-space X extent of the full pedestal bbox
   worldDepth: 1.2,    // world-space Z extent of the full pedestal bbox
+}
+
+// ─── Chamber Environment (Procedural) ─────────────────────────────────────────
+//
+// Procedural ancient chamber built with simple Three.js geometry.
+// Replaces the old GLB-based environment that caused camera intersection.
+//
+// Design intent: a vast, forgotten ancient magical chamber that frames the
+// book + pedestal as the hero composition. Architecture should mostly
+// disappear into shadow — dark rough stone, minimal highlight.
+//
+// Coordinate reference:
+//   Pedestal sits at world origin [0, 0, 0], topSurfaceY ≈ 1.4
+//   Camera path:  start [0, 2.0, 7.0] → mid [0, 2.8, 4.0] → end [-0.037, 3.868, 1.732]
+//   Camera Z range: 7.0 → 1.73 (approaches from +Z)
+//   OrbitControls maxDistance: 20 units
+//
+// ALL environment geometry values live here for easy tuning.
+
+export const CHAMBER_CONFIG = {
+  // ── Shared Material ──────────────────────────────────────────────────────
+  // DEBUG EVALUATION PASS — bright enough to clearly see all architecture.
+  // Dial back to dark tones once architecture is approved.
+  material: {
+    color: '#5a5045',       // Mid-tone warm stone — CLEARLY VISIBLE
+    roughness: 0.85,        // Rough stone surface
+    metalness: 0.05,        // Nearly pure dielectric
+  },
+
+  // ── Columns ──────────────────────────────────────────────────────────────
+  // 4 large cylindrical columns positioned behind/to the sides of the pedestal.
+  // They frame the composition symmetrically without occluding the camera path.
+  columns: {
+    radius: 0.6,
+    height: 14,
+    radialSegments: 16,     // Enough for smooth cylinder without heavy poly count
+    // Each column: [x, y, z] world position.
+    // Y = height/2 - 0.05 so the column base sits at the floor.
+    positions: [
+      [-5.0, 6.95, -4.0],   // Back-left
+      [5.0,  6.95, -4.0],   // Back-right
+      [-6.5, 6.95, 2.0],    // Front-left (wider, won't block camera)
+      [6.5,  6.95, 2.0],    // Front-right
+    ],
+    // Per-column material override (null = use shared material)
+    materialOverride: null,
+    // Optional column base (plinth) — simple box at the base of each column
+    base: {
+      enabled: true,
+      width: 1.4,
+      height: 0.5,
+      depth: 1.4,
+    },
+    // Optional column capital — simple box at the top of each column
+    capital: {
+      enabled: true,
+      width: 1.3,
+      height: 0.4,
+      depth: 1.3,
+    },
+  },
+
+  // ── Walls ────────────────────────────────────────────────────────────────
+  // Very dark distant walls to eliminate the black void.
+  // Positioned far enough that they catch minimal light and feel like
+  // the edge of a vast chamber.
+  walls: {
+    // Back wall — behind the pedestal, closing the background void
+    back: {
+      width: 40,
+      height: 16,
+      position: [0, 7.95, -10],
+      rotation: [0, 0, 0],
+    },
+    // Left wall
+    left: {
+      width: 30,
+      height: 16,
+      position: [-12, 7.95, 0],
+      rotation: [0, Math.PI / 2, 0],
+    },
+    // Right wall
+    right: {
+      width: 30,
+      height: 16,
+      position: [12, 7.95, 0],
+      rotation: [0, -Math.PI / 2, 0],
+    },
+    // Wall material override — DEBUG: bright enough to see wall surfaces
+    materialOverride: {
+      color: '#4a4238',     // Warm stone grey — CLEARLY VISIBLE
+      roughness: 0.88,
+      metalness: 0.03,
+    },
+  },
+
+  // ── Arch (behind pedestal) ───────────────────────────────────────────────
+  // Large pointed arch silhouette behind the pedestal.
+  // Adds compositional framing and temple atmosphere.
+  arch: {
+    enabled: true,
+    position: [0, 0, -6.5],
+    // Arch dimensions
+    innerWidth: 5.0,        // Opening width
+    innerHeight: 8.0,       // Opening height to the crown
+    thickness: 1.2,         // Depth of the arch (Z extent)
+    pillarWidth: 1.5,       // Width of each side pillar
+    totalHeight: 12.0,      // Total height including above the arch curve
+    // Number of segments for the arch curve
+    archSegments: 24,
+    materialOverride: null, // null = use shared material
+  },
+
+  // ── Ceiling ──────────────────────────────────────────────────────────────
+  // Optional ceiling plane to close the top of the chamber
+  ceiling: {
+    enabled: true,
+    size: 40,
+    position: [0, 16, 0],
+    rotation: [Math.PI / 2, 0, 0],
+    materialOverride: {
+      color: '#3a342e',     // Ceiling stone — visible but darker than walls
+      roughness: 0.9,
+      metalness: 0.02,
+    },
+  },
+
+  // ── Environment Lighting ─────────────────────────────────────────────────
+  // Subtle cool fill lights to reveal chamber architecture silhouettes.
+  // These are SEPARATE from SceneLighting (which lights the book/pedestal).
+  // Keep intensities low so the book remains the hero focal point.
+  lighting: {
+    // ── DEBUG EVALUATION PASS ──────────────────────────────────────────────
+    // Strong ambient + directional fills to make ALL architecture clearly visible.
+    // Reduce these once architecture is approved.
+
+    // Strong ambient — raises absolute floor brightness for all geometry
+    ambient: {
+      color: '#c8c0b8',     // Warm neutral
+      intensity: 0.6,       // HIGH — ensures nothing is pure black
+    },
+
+    // Fill lights — strong, wide-reaching, low decay for maximum coverage
+    fills: [
+      // ── Warm key from above/behind — reveals stone surfaces with highlights ──
+      {
+        name: 'chamber-key-overhead',
+        color: '#f0d8a8',     // Warm golden
+        intensity: 30,
+        position: [0, 14, -3], // High above, slightly behind — washes down on arch + walls
+        distance: 40,
+        decay: 1.5,           // Gentler falloff than physically realistic
+      },
+      // ── Back wall + arch face illumination ──
+      {
+        name: 'chamber-fill-back',
+        color: '#d0c0a0',     // Warm stone tone
+        intensity: 25,
+        position: [0, 6, -4],  // In front of back wall — lights arch + back wall
+        distance: 35,
+        decay: 1.5,
+      },
+      // ── Left side — grazes left columns + left wall ──
+      {
+        name: 'chamber-fill-left',
+        color: '#a0b8c8',     // Cool fill
+        intensity: 20,
+        position: [-10, 6, 0],
+        distance: 35,
+        decay: 1.5,
+      },
+      // ── Right side — grazes right columns + right wall ──
+      {
+        name: 'chamber-fill-right',
+        color: '#a0b8c8',     // Cool fill
+        intensity: 20,
+        position: [10, 6, 0],
+        distance: 35,
+        decay: 1.5,
+      },
+      // ── Floor illumination — reveals the stone floor clearly ──
+      {
+        name: 'chamber-fill-floor-front',
+        color: '#c8b898',     // Warm neutral
+        intensity: 18,
+        position: [0, 3, 5],   // In front, above floor level
+        distance: 30,
+        decay: 1.5,
+      },
+      // ── Floor behind pedestal ──
+      {
+        name: 'chamber-fill-floor-back',
+        color: '#b0a898',
+        intensity: 15,
+        position: [0, 2, -6],
+        distance: 30,
+        decay: 1.5,
+      },
+      // ── Ceiling / upper architecture illumination ──
+      {
+        name: 'chamber-fill-ceiling',
+        color: '#b8b0a8',     // Neutral warm
+        intensity: 15,
+        position: [0, 12, 0], // High up near ceiling
+        distance: 30,
+        decay: 1.5,
+      },
+    ],
+  },
+}
+
+// ─── Chamber Floor ────────────────────────────────────────────────────────────
+//
+// Simple ground plane to serve as the floor of the dark chamber.
+// Placed slightly below the pedestal base (Y = 0) to avoid Z-fighting or clipping.
+//
+export const FLOOR_CONFIG = {
+  // Size of the plane (width and height). Made large enough to cover the visible area.
+  size: 100,
+
+  // Position: slightly below origin so the pedestal (at Y=0) sits on top.
+  position: [0, -0.05, 0],
+
+  // Rotation: -Math.PI / 2 to lay the plane flat on the XZ axes.
+  rotation: [-Math.PI / 2, 0, 0],
+
+  // Material settings: visible stone floor — DEBUG EVALUATION PASS
+  material: {
+    color: '#4a4440', // Mid-tone stone grey — CLEARLY VISIBLE
+    roughness: 0.85,  // Rough stone
+    metalness: 0.05,  // Mostly dielectric
+  }
 }

@@ -3,20 +3,22 @@ import SceneLighting from '../components/SceneLighting'
 import Pedestal from '../components/Pedestal'
 import BookModel from '../components/BookModel'
 import CameraRig from '../components/CameraRig'
+import ChamberFloor from '../components/ChamberFloor'
+import ChamberEnvironment from '../components/ChamberEnvironment'
 
 /**
- * IntroScene Component — Phase 1: Book Introduction
+ * IntroScene Component — Phase 1 + 2: Book Introduction + Atmosphere
  *
  * Composes the opening cinematic scene:
  *   - CameraRig performs the slow GSAP-driven dolly push-in
  *   - SceneLighting provides warm atmospheric candle-like lighting
- *   - Pedestal is a simple stone lectern built from box geometry
+ *   - ChamberFloor provides a simple dark ground plane (Phase 2)
+ *   - ChamberEnvironment adds procedural columns, walls, arch (Phase 2)
+ *   - Pedestal is a stylized stone lectern loaded from GLB
  *   - BookModel loads the OBJ/MTL book and places it on the pedestal
  *
- * BookModel is wrapped in Suspense because useLoader suspends rendering
- * while assets are fetched. The fallback renders nothing, keeping the
- * scene dark until the model is ready — matching the intent of the
- * "begins in darkness" brief.
+ * Both GLB models (pedestal) are wrapped in Suspense.
+ * BookModel uses useLoader which also suspends; the outer Suspense covers it.
  *
  * No interaction. No UI. No text. No particles. Only atmosphere.
  */
@@ -28,6 +30,12 @@ function IntroScene() {
 
       {/* Atmospheric warm lighting */}
       <SceneLighting />
+
+      {/* Phase 2: Simple dark floor — grounds the pedestal naturally */}
+      <ChamberFloor />
+
+      {/* Phase 2: Procedural ancient chamber — columns, walls, arch */}
+      <ChamberEnvironment />
 
       {/* Stone pedestal — always visible even while book loads */}
       <Pedestal />
@@ -41,3 +49,4 @@ function IntroScene() {
 }
 
 export default IntroScene
+
