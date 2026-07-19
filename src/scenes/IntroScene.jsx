@@ -24,27 +24,25 @@ import ChamberEnvironment from '../components/ChamberEnvironment'
  */
 function IntroScene() {
   return (
-    <group name="intro-scene-root">
-      {/* Camera dolly animation — logic only, renders nothing */}
-      <CameraRig />
+    <Suspense fallback={null}>
+      <group name="intro-scene-root">
+        {/* Camera dolly animation — logic only, renders nothing */}
+        <CameraRig />
 
-      {/* Atmospheric warm lighting */}
-      <SceneLighting />
+        {/* Atmospheric warm lighting */}
+        <SceneLighting />
 
-      {/* Phase 2: Simple dark floor — grounds the pedestal naturally */}
-      <ChamberFloor />
+        {/* Stone pedestal — suspended until GLB loads */}
+        <Pedestal />
 
-      {/* Phase 2: Procedural ancient chamber — columns, walls, arch */}
-      <ChamberEnvironment />
+        {/* Phase 2: Chamber environment + floor — suspended while PBR textures load */}
+        <ChamberFloor />
+        <ChamberEnvironment />
 
-      {/* Stone pedestal — always visible even while book loads */}
-      <Pedestal />
-
-      {/* Book model — suspended until OBJ + MTL + texture are ready */}
-      <Suspense fallback={null}>
+        {/* Book model — suspended until OBJ + MTL + texture are ready */}
         <BookModel />
-      </Suspense>
-    </group>
+      </group>
+    </Suspense>
   )
 }
 

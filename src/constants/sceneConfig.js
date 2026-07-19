@@ -242,14 +242,14 @@ export const CHAMBER_CONFIG = {
   // Large pointed arch silhouette behind the pedestal.
   // Adds compositional framing and temple atmosphere.
   arch: {
-    enabled: true,
-    position: [0, 0, -6.5],
+    enabled: false,
+    position: [0, 0, -9.5], // Push further back near back wall (-10)
     // Arch dimensions
-    innerWidth: 5.0,        // Opening width
-    innerHeight: 8.0,       // Opening height to the crown
-    thickness: 1.2,         // Depth of the arch (Z extent)
-    pillarWidth: 1.5,       // Width of each side pillar
-    totalHeight: 12.0,      // Total height including above the arch curve
+    innerWidth: 10.0,       // Wider opening to frame pedestal completely
+    innerHeight: 12.0,      // Taller opening
+    thickness: 1.0,         // Depth of the arch
+    pillarWidth: 3.0,       // Wider pillars
+    totalHeight: 16.0,      // Match wall height
     // Number of segments for the arch curve
     archSegments: 24,
     materialOverride: null, // null = use shared material
@@ -374,4 +374,65 @@ export const FLOOR_CONFIG = {
     roughness: 0.85,  // Rough stone
     metalness: 0.05,  // Mostly dielectric
   }
+}
+
+// ─── Chamber PBR Textures ─────────────────────────────────────────────────────
+//
+// Centralized texture paths, repeat/tiling values, and tint colors for all
+// chamber architecture PBR materials.
+//
+// Texture sets (diffuse + normal GL + roughness) for:
+//   wall   → walls + arch (Rock Wall 13)
+//   floor  → chamber floor (Red Sandstone Tiles)
+//   column → column shafts, bases, capitals (Dark Rock)
+//
+// Repeat values control how many times the texture tiles across each surface.
+// Tune these independently per element for realistic stone scale.
+//
+export const CHAMBER_TEXTURES = {
+  // ── Wall Texture Set (Rock Wall 13) ─────────────────────────────────────
+  wall: {
+    diffuse:   '/textures/Chamber/wall/rock_wall_13_diff_1k.jpg',
+    normal:    '/textures/Chamber/wall/rock_wall_13_nor_gl_1k.jpg',
+    roughness: '/textures/Chamber/wall/rock_wall_13_rough_1k.jpg',
+    // Tint: dark weathered warm stone — multiplied with diffuse texture
+    color: '#8a7d6e',
+    metalness: 0.02,
+    normalScale: 1.5,     // Emphasize stone relief
+    // Repeat per surface — [U, V] tiling
+    repeat: {
+      backWall:  [10, 4],   // 40 units wide × 16 tall → ~4m per stone tile
+      sideWall:  [8, 4],    // 30 units wide × 16 tall
+      arch:      [6, 6],    // Frame ~16 units wide × 16 tall
+      ceiling:   [10, 10],  // 40×40 ceiling plane
+    },
+  },
+
+  // ── Floor Texture Set (Red Sandstone Tiles) ─────────────────────────────
+  floor: {
+    diffuse:   '/textures/Chamber/floor/red_sandstone_tiles_diff_1k.jpg',
+    normal:    '/textures/Chamber/floor/red_sandstone_tiles_nor_gl_1k.jpg',
+    roughness: '/textures/Chamber/floor/red_sandstone_tiles_rough_1k.jpg',
+    // Tint: muted dark sandstone — not too red, ancient and dirty
+    color: '#7a6e60',
+    metalness: 0.02,
+    normalScale: 1.2,
+    repeat: [25, 25],       // 100×100 floor plane → ~4m per tile
+  },
+
+  // ── Column Texture Set (Dark Rock) ──────────────────────────────────────
+  column: {
+    diffuse:   '/textures/Chamber/column/dark_rock_diff_1k.jpg',
+    normal:    '/textures/Chamber/column/dark_rock_nor_gl_1k.jpg',
+    roughness: '/textures/Chamber/column/dark_rock_rough_1k.jpg',
+    // Tint: dark aged stone
+    color: '#6a6058',
+    metalness: 0.03,
+    normalScale: 1.8,       // Strong relief for column texture
+    repeat: {
+      shaft:   [3, 8],      // Cylinder: wraps 3× around, 8× along height
+      base:    [2, 1],      // Box base: 2× across each face
+      capital: [2, 1],      // Box capital: 2× across each face
+    },
+  },
 }

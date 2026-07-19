@@ -1,13 +1,20 @@
 import React, { useMemo } from 'react'
 import * as THREE from 'three'
 import { CHAMBER_CONFIG } from '../constants/sceneConfig'
+import useChamberTextures from '../hooks/useChamberTextures'
 
 /**
  * ChamberEnvironment Component — Phase 2: Procedural Ancient Chamber
  *
  * Replaces the old GLB-based environment with lightweight procedural geometry.
  * Creates a vast, forgotten ancient magical chamber that frames the book + pedestal
- * as the hero composition. All architecture mostly disappears into shadow.
+ * as the hero composition.
+ *
+ * Now uses real PBR texture maps (diffuse + normal + roughness) for:
+ *   - Walls: Rock Wall 13 texture set
+ *   - Arch: Rock Wall 13 texture set (same as walls)
+ *   - Columns: Dark Rock texture set
+ *   - Ceiling: Rock Wall 13 texture set (reused from walls)
  *
  * Geometry elements (all config-driven from CHAMBER_CONFIG):
  *   - 4 large cylindrical columns with bases and capitals
@@ -16,17 +23,16 @@ import { CHAMBER_CONFIG } from '../constants/sceneConfig'
  *   - 1 ceiling plane to close the chamber top
  *
  * No GLB loading, no particles, no fog, no bloom, no animations.
- * Only simple geometry + dark rough stone materials.
  */
 
 // ── Sub-components ───────────────────────────────────────────────────────────
 
 /**
  * Single column with optional base (plinth) and capital.
+ * Uses Dark Rock PBR textures with independent repeat values per part.
  */
-function Column({ position, config, sharedMaterial }) {
+function Column({ position, config, textureMaterials }) {
   const { radius, height, radialSegments, base, capital } = config
-  const mat = sharedMaterial
 
   // Base Y: bottom of column sits at position.y - height/2
   // The position passed in already accounts for height centering
@@ -38,7 +44,10 @@ function Column({ position, config, sharedMaterial }) {
       {/* Column shaft */}
       <mesh castShadow receiveShadow name="column-shaft">
         <cylinderGeometry args={[radius, radius * 1.05, height, radialSegments]} />
-        <meshStandardMaterial {...mat} />
+        <meshStandardMaterial
+          {...textureMaterials.shaft}
+          side={THREE.FrontSide}
+        />
       </mesh>
 
       {/* Base / Plinth */}
@@ -50,7 +59,10 @@ function Column({ position, config, sharedMaterial }) {
           name="column-base"
         >
           <boxGeometry args={[base.width, base.height, base.depth]} />
-          <meshStandardMaterial {...mat} />
+          <meshStandardMaterial
+            {...textureMaterials.base}
+            side={THREE.FrontSide}
+          />
         </mesh>
       )}
 
@@ -63,7 +75,10 @@ function Column({ position, config, sharedMaterial }) {
           name="column-capital"
         >
           <boxGeometry args={[capital.width, capital.height, capital.depth]} />
-          <meshStandardMaterial {...mat} />
+          <meshStandardMaterial
+            {...textureMaterials.capital}
+            side={THREE.FrontSide}
+          />
         </mesh>
       )}
     </group>
@@ -71,9 +86,9 @@ function Column({ position, config, sharedMaterial }) {
 }
 
 /**
- * Wall — a simple plane mesh.
+ * Wall — a simple plane mesh with PBR wall textures.
  */
-function Wall({ width, height, position, rotation, material }) {
+function Wall({ width, height, position, rotation, materialProps }) {
   return (
     <mesh
       position={position}
@@ -82,110 +97,20 @@ function Wall({ width, height, position, rotation, material }) {
       name="chamber-wall"
     >
       <planeGeometry args={[width, height]} />
-      <meshStandardMaterial {...material} side={THREE.DoubleSide} />
+      <meshStandardMaterial {...materialProps} side={THREE.DoubleSide} />
     </mesh>
   )
 }
 
-/**
- * ArchStructure — a pointed arch silhouette behind the pedestal.
- *
- * Built using ExtrudeGeometry: we define a 2D arch-shaped cross-section
- * (two pillars + curved arch top) and extrude it in Z for thickness.
- * This is entirely procedural — no models needed.
- */
-function ArchStructure({ config, sharedMaterial }) {
-  const {
-    position,
-    innerWidth,
-    innerHeight,
-    thickness,
-    pillarWidth,
-    totalHeight,
-    archSegments,
-    materialOverride,
-  } = config
 
-  const mat = materialOverride || sharedMaterial
-
-  // Build the 2D arch shape
-  const archShape = useMemo(() => {
-    const shape = new THREE.Shape()
-    const halfInner = innerWidth / 2
-    const totalWidth = innerWidth + pillarWidth * 2
-    const halfTotal = totalWidth / 2
-
-    // Start at bottom-left corner
-    shape.moveTo(-halfTotal, -0.05)
-
-    // Left pillar — up
-    shape.lineTo(-halfTotal, totalHeight)
-
-    // Top span — across
-    shape.lineTo(halfTotal, totalHeight)
-
-    // Right pillar — down
-    shape.lineTo(halfTotal, -0.05)
-
-    // Right pillar inner edge — up to arch spring point
-    shape.lineTo(halfInner, -0.05)
-    shape.lineTo(halfInner, innerHeight * 0.65)
-
-    // Arch curve — pointed arch (two arcs meeting at the crown)
-    // Right side arc going up to crown
-    const crownY = innerHeight
-    const segments = Math.max(archSegments / 2, 6)
-
-    // Use quadratic bezier for pointed arch shape
-    // Right arc: from right spring point to crown
-    shape.quadraticCurveTo(
-      halfInner * 0.3, crownY * 0.95,  // control point (pulled inward for pointed look)
-      0, crownY                          // crown point
-    )
-
-    // Left arc: from crown to left spring point
-    shape.quadraticCurveTo(
-      -halfInner * 0.3, crownY * 0.95, // control point
-      -halfInner, innerHeight * 0.65    // left spring point
-    )
-
-    // Left pillar inner edge — down to bottom
-    shape.lineTo(-halfInner, -0.05)
-
-    // Close back to start
-    shape.lineTo(-halfTotal, -0.05)
-
-    return shape
-  }, [innerWidth, innerHeight, pillarWidth, totalHeight, archSegments])
-
-  // Extrude settings
-  const extrudeSettings = useMemo(() => ({
-    steps: 1,
-    depth: thickness,
-    bevelEnabled: false,
-  }), [thickness])
-
-  return (
-    <mesh
-      position={[position[0], position[1], position[2] - thickness / 2]}
-      castShadow
-      receiveShadow
-      name="chamber-arch"
-    >
-      <extrudeGeometry args={[archShape, extrudeSettings]} />
-      <meshStandardMaterial {...mat} side={THREE.DoubleSide} />
-    </mesh>
-  )
-}
 
 // ── Main Component ───────────────────────────────────────────────────────────
 
 function ChamberEnvironment() {
-  const { material, columns, walls, arch, ceiling, lighting } = CHAMBER_CONFIG
+  const { columns, walls, arch, ceiling, lighting } = CHAMBER_CONFIG
 
-  // Resolve wall material
-  const wallMat = walls.materialOverride || material
-  const ceilingMat = ceiling.materialOverride || material
+  // Load all PBR texture sets via shared hook
+  const textures = useChamberTextures()
 
   return (
     <group name="chamber-environment">
@@ -219,37 +144,37 @@ function ChamberEnvironment() {
           key={`column-${i}`}
           position={pos}
           config={columns}
-          sharedMaterial={columns.materialOverride || material}
+          textureMaterials={textures.column}
         />
       ))}
 
       {/* ── Walls ───────────────────────────────────────────────────────── */}
+      {/* Back wall — uses backWall repeat */}
       <Wall
         width={walls.back.width}
         height={walls.back.height}
         position={walls.back.position}
         rotation={walls.back.rotation}
-        material={wallMat}
+        materialProps={textures.wall.backWall}
       />
+      {/* Left wall — uses sideWall repeat */}
       <Wall
         width={walls.left.width}
         height={walls.left.height}
         position={walls.left.position}
         rotation={walls.left.rotation}
-        material={wallMat}
+        materialProps={textures.wall.sideWall}
       />
+      {/* Right wall — uses sideWall repeat */}
       <Wall
         width={walls.right.width}
         height={walls.right.height}
         position={walls.right.position}
         rotation={walls.right.rotation}
-        material={wallMat}
+        materialProps={textures.wall.sideWall}
       />
 
-      {/* ── Arch ────────────────────────────────────────────────────────── */}
-      {arch.enabled && (
-        <ArchStructure config={arch} sharedMaterial={material} />
-      )}
+
 
       {/* ── Ceiling ─────────────────────────────────────────────────────── */}
       {ceiling.enabled && (
@@ -260,7 +185,10 @@ function ChamberEnvironment() {
           name="chamber-ceiling"
         >
           <planeGeometry args={[ceiling.size, ceiling.size]} />
-          <meshStandardMaterial {...ceilingMat} side={THREE.DoubleSide} />
+          <meshStandardMaterial
+            {...textures.wall.ceiling}
+            side={THREE.DoubleSide}
+          />
         </mesh>
       )}
     </group>

@@ -166,4 +166,10 @@ function BookModel() {
   )
 }
 
+// Preload materials for the book to ensure they are ready quickly.
+// Note: We intentionally do NOT preload the OBJLoader here, because doing so
+// without the materials callback caches a material-less (white) version of the OBJ.
+useLoader.preload(MTLLoader, BOOK_CONFIG.mtlPath)
+
 export default BookModel
+

@@ -1,21 +1,25 @@
 import React from 'react'
+import * as THREE from 'three'
 import { FLOOR_CONFIG } from '../constants/sceneConfig'
+import useChamberTextures from '../hooks/useChamberTextures'
 
 /**
  * ChamberFloor Component — Phase 2: Atmosphere
  *
- * Renders a simple large ground plane beneath the pedestal to establish
+ * Renders a large ground plane beneath the pedestal to establish
  * the floor of the ancient dark chamber.
  *
- * Uses a subtle dark grey/brown rough stone-like material that does not
- * compete visually with the book.
+ * Now uses Red Sandstone Tiles PBR textures (diffuse + normal + roughness)
+ * loaded via the shared useChamberTextures hook.
  *
- * All transform values (size, position, rotation) and material properties
- * live in FLOOR_CONFIG (sceneConfig.js) so they can be adjusted without
- * touching this file.
+ * All transform values (size, position, rotation) live in FLOOR_CONFIG
+ * (sceneConfig.js). Texture paths and repeat values live in CHAMBER_TEXTURES.
  */
 function ChamberFloor() {
-  const { size, position, rotation, material } = FLOOR_CONFIG
+  const { size, position, rotation } = FLOOR_CONFIG
+
+  // Load PBR textures via shared hook
+  const textures = useChamberTextures()
 
   return (
     <mesh
@@ -26,9 +30,8 @@ function ChamberFloor() {
     >
       <planeGeometry args={[size, size]} />
       <meshStandardMaterial
-        color={material.color}
-        roughness={material.roughness}
-        metalness={material.metalness}
+        {...textures.floor}
+        side={THREE.FrontSide}
       />
     </mesh>
   )
