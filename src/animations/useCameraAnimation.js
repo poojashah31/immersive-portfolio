@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import { Vector3 } from 'three'
 import gsap from 'gsap'
-import { CAMERA_CONFIG, DOLLY_CONFIG } from '../constants/sceneConfig'
+import { CAMERA_CONFIG, DOLLY_CONFIG, ATMOSPHERE_ANIMATION_CONFIG } from '../constants/sceneConfig'
+import { animationState } from '../store/animationState'
 
 /**
  * useCameraAnimation Hook
@@ -64,6 +65,16 @@ function useCameraAnimation() {
     // Create a multi-stage cinematic timeline
     const tl = gsap.timeline({
       delay: DOLLY_CONFIG.delay,
+      onUpdate: function() {
+        // ATMOSPHERE_ANIMATION_CONFIG.delay is global time (from mount).
+        // this.time() is time since the timeline started (global - DOLLY_CONFIG.delay).
+        const current = this.time()
+        const atmDelay = ATMOSPHERE_ANIMATION_CONFIG.delay - DOLLY_CONFIG.delay
+        const atmDuration = ATMOSPHERE_ANIMATION_CONFIG.duration
+        
+        let progress = (current - atmDelay) / atmDuration
+        animationState.effectProgress = Math.max(0, Math.min(1, progress))
+      },
       onComplete: () => {
         isAnimatingRef.current = false
         setIsAnimating(false)

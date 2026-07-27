@@ -60,6 +60,16 @@ export const DOLLY_CONFIG = {
   ease: 'power2.inOut',
 }
 
+// ─── Cinematic Atmosphere Animation ────────────────────────────────────────────
+
+export const ATMOSPHERE_ANIMATION_CONFIG = {
+  // Fade in starts shortly after camera push-in begins, creating overlap
+  delay: 1.5,
+  // Smoothly fades in over 3.5s while camera is still moving
+  duration: 3.5,
+  ease: 'sine.inOut',
+}
+
 // ─── Lighting ────────────────────────────────────────────────────────────────
 
 export const LIGHTING_CONFIG = {
@@ -104,6 +114,57 @@ export const SCENE_CONFIG = {
     near: 25,       // Pushed WAY back so architecture is not fogged out
     far: 60,        // Very far — allows distant walls to remain visible
   },
+}
+
+// ─── Dust Particles ───────────────────────────────────────────────────────────
+//
+// Sparse, tiny dust motes floating slowly through the air. Concentrated around
+// the book/pedestal area so they catch the warm key light.
+//
+// TUNING NOTES:
+//   count       : total number of particles. Keep ≤ 300 for performance.
+//   spawnVolume : [width, height, depth] of the spawn box in world units.
+//                 Centered on spawnCenter.
+//   spawnCenter : world-space XYZ of the spawn volume center.
+//   size        : base point size in pixels. 1.0–2.5 is barely visible.
+//   sizeAttenuation: true = far particles appear smaller (realistic).
+//   color       : tint of the dust motes (warm gold catches the key light).
+//   opacity     : alpha of the particle material. Keep ≤ 0.55 for subtlety.
+//   speed       : multiplier applied to the random velocity vectors.
+//                 0.0 = frozen, 0.05 = barely drifting, 0.2 = obvious drift.
+//   turbulence  : amplitude of per-particle random direction wobble each frame.
+//   seed        : random seed for deterministic particle initialization.
+//
+export const DUST_PARTICLES_CONFIG = {
+  enabled: true,
+  count: 300,
+  // Adjusted center and expanded volume to cover both sides of the book (X=0)
+  spawnCenter: [-1.0, 4.0, -0.5], 
+  spawnVolume: [4.0, 7.0, 4.0], // Wider box encompasses the diagonal beam more naturally
+  size: 0.03,                   // World units! 0.03 is ~3cm (tiny glowing dots)
+  sizeAttenuation: true,
+  color: '#ffcca0',             // Brighter warm/golden color
+  targetOpacity: 0.7,           // GSAP animates from 0 to targetOpacity
+  driftDirection: [0.3, -0.9, 0.3], // Drift diagonally downwards with the light
+  speed: 0.02,                  // Very slow drift
+  turbulence: 0.0002,           // Very gentle wobble
+  seed: 42,
+}
+
+// ─── Light Shaft ──────────────────────────────────────────────────────────────
+//
+// A diagonal volumetric-style light beam that fades in cinematically.
+//
+export const LIGHT_SHAFT_CONFIG = {
+  enabled: true,
+  sourcePosition: [-4.0, 9.0, -2.0], // Above, left, and slightly back
+  targetPosition: [0.0, 1.4, 0.0],   // Points exactly at the book/pedestal top
+  radiusTop: 2.5,                    // Wide at the ceiling
+  radiusBottom: 0.5,                 // Narrow where it hits the book
+  color: '#ffcca0',                  // Warm golden sunlight
+  // Per-quad peak opacity. The 28 additive layers stack, so keep this
+  // small — the cumulative centre brightness is visually pleasant.
+  targetOpacity: 0.018,
 }
 
 // ─── Book Model ───────────────────────────────────────────────────────────────

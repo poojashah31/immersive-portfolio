@@ -5,6 +5,8 @@ import BookModel from '../components/BookModel'
 import CameraRig from '../components/CameraRig'
 import ChamberFloor from '../components/ChamberFloor'
 import ChamberEnvironment from '../components/ChamberEnvironment'
+import DustParticles from '../components/DustParticles'
+import LightShaft from '../components/LightShaft'
 
 /**
  * IntroScene Component — Phase 1 + 2: Book Introduction + Atmosphere
@@ -16,11 +18,13 @@ import ChamberEnvironment from '../components/ChamberEnvironment'
  *   - ChamberEnvironment adds procedural columns, walls, arch (Phase 2)
  *   - Pedestal is a stylized stone lectern loaded from GLB
  *   - BookModel loads the OBJ/MTL book and places it on the pedestal
+ *   - DustParticles adds sparse floating dust motes in the lit area
+ *   - LightShaft adds a diagonal cinematic sunbeam
  *
  * Both GLB models (pedestal) are wrapped in Suspense.
  * BookModel uses useLoader which also suspends; the outer Suspense covers it.
  *
- * No interaction. No UI. No text. No particles. Only atmosphere.
+ * No interaction. No UI. No text. Only atmosphere.
  */
 function IntroScene() {
   return (
@@ -41,6 +45,10 @@ function IntroScene() {
 
         {/* Book model — suspended until OBJ + MTL + texture are ready */}
         <BookModel />
+
+        {/* Phase 3: Floating dust motes — sparse particles drifting in the lit zone */}
+        <DustParticles />
+        <LightShaft />
       </group>
     </Suspense>
   )
