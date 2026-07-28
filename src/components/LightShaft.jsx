@@ -245,8 +245,15 @@ var beamFragmentShader = /* glsl */`
     // Sample the procedural beam alpha-map
     float beamAlpha = texture2D(uAlphaMap, vUv).a;
 
-    // Animated noise mask — multiple octaves for organic feel
-    // Scrolls slowly upward to simulate rising dust currents
+    // ── Radial centre-boost gradient ──────────────────────────────────────
+    // Gentle Gaussian that peaks at ~1.12× in the horizontal centre and
+    // falls smoothly to 1.0 at the lateral edges. This makes the core of
+    // the shaft feel denser/brighter without adding opacity at the fringe.
+    float dx = vUv.x - 0.5;
+    float radialBoost = 1.0 + 0.12 * exp(-dx * dx * 18.0);
+
+    // ── Animated noise mask — multiple octaves for organic feel ──────────
+    // Primary drift: slow upward scroll simulating rising dust currents
     vec2 noiseUV = vUv * vec2(3.0, 5.0);
     float drift = uTime * 0.06;
 
@@ -255,14 +262,26 @@ var beamFragmentShader = /* glsl */`
     float n3 = snoise(noiseUV * 4.7 + vec2(-drift * 0.5, drift * 0.8)) * 0.5 + 0.5;
 
     // Combine octaves: large-scale density shifts + medium detail + fine grain
-    float noiseMask = n1 * 0.55 + n2 * 0.30 + n3 * 0.15;
+    float noiseMask = n1 * 0.50 + n2 * 0.30 + n3 * 0.20;
 
-    // Remap to keep brightness centred — avoid making the beam too dark
-    // Range roughly 0.55..1.0 so it only subtracts, never fully kills the beam
+    // ── Secondary density layer — slow drifting dust patches ─────────────
+    // Very low-frequency, large-scale noise that creates broad regions of
+    // slightly thicker / thinner air. Moves on a different axis so the
+    // two layers don't track together.
+    vec2 dustUV = vUv * vec2(1.2, 2.0);
+    float dustDrift = uTime * 0.025;
+    float dustNoise = snoise(dustUV + vec2(dustDrift, -dustDrift * 0.6)) * 0.5 + 0.5;
+    // Blend in subtly — range ≈ 0.92..1.08
+    float dustMod = 0.92 + dustNoise * 0.16;
+
+    // Remap primary noise to keep brightness centred — avoid making the
+    // beam too dark. Range roughly 0.55..1.0 so it only subtracts, never
+    // fully kills the beam
     noiseMask = 0.50 + noiseMask * 0.50;
+    noiseMask *= dustMod;
 
-    // Final alpha: beam texture × noise × overall opacity
-    float finalAlpha = beamAlpha * noiseMask * uOpacity;
+    // Final alpha: beam texture × radial boost × noise × overall opacity
+    float finalAlpha = beamAlpha * radialBoost * noiseMask * uOpacity;
 
     gl_FragColor = vec4(uColor, finalAlpha);
   }
@@ -337,9 +356,10 @@ export default function LightShaft() {
   // Animate opacity, noise, and cylindrical billboard each frame
   useFrame(function(state) {
     var progress = animationState.effectProgress
-    // Reduced peak opacity: was 0.32, now ~0.14 (about 18% lower than even
-    // a hypothetical previous reduction). The beam should be ghostly/atmospheric.
-    var peakOpacity = 0.14
+    // Peak opacity: 0.16 — about 12% brighter than the previous 0.14.
+    // The radial centre-boost in the shader further concentrates perceived
+    // intensity without raising overall opacity, so the beam stays ghostly.
+    var peakOpacity = 0.16
 
     if (meshRef.current) {
       // Update shader uniforms
